@@ -1,5 +1,6 @@
 " Author: Nate Peterson
-" Repository: https://github.com/ntpeters/vim-better-whitespace
+" Modified: LittleBird
+" Original Repository: https://github.com/ntpeters/vim-better-whitespace
 
 " Prevent loading the plugin multiple times
 if exists('g:loaded_better_whitespace_plugin')
@@ -174,6 +175,12 @@ function! s:DetectWhitespace(line1, line2)
     return search(s:strip_whitespace_pattern, 'cn', a:line2)
 endfunction
 
+" Removes all extraneous whitespace in the whole file
+function! StripWhitespaceWholeFile()
+  let retv = s:StripWhitespace(1, line('$'))
+  return retv
+endfunction
+
 " Removes all extraneous whitespace in the file
 function! s:StripWhitespace(line1, line2)
     " Save the current search and cursor position
@@ -195,9 +202,14 @@ function! s:StripWhitespace(line1, line2)
         silent execute '%s/\('.nl.'\)\+\%$//e'
     endif
 
+    let nl = line('.')
+    let nc = col('.')
+
     " Restore the saved search and cursor position
     let @/=_s
     call cursor(l, c)
+
+    return (nl == l && nc == c) ? 0 : 1
 endfunction
 
 " Removes all extraneous whitespace in the file
