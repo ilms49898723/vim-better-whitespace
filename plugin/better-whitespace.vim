@@ -176,7 +176,7 @@ function! s:DetectWhitespace(line1, line2)
 endfunction
 
 " Removes all extraneous whitespace in the whole file
-function! StripWhitespaceWholeFile()
+function! StripWhitespaceInFile()
   let retv = s:StripWhitespace(1, line('$'))
   return retv
 endfunction
@@ -187,6 +187,7 @@ function! s:StripWhitespace(line1, line2)
     let _s=@/
     let l = line('.')
     let c = col('.')
+    let cc = col('$')
 
     silent execute ':' . a:line1 . ',' . a:line2 . 's/' . s:strip_whitespace_pattern . '//e'
 
@@ -204,12 +205,13 @@ function! s:StripWhitespace(line1, line2)
 
     let nl = line('.')
     let nc = col('.')
+    let ncc = col('$')
 
     " Restore the saved search and cursor position
     let @/=_s
     call cursor(l, c)
 
-    return (nl == l && nc == c) ? 0 : 1
+    return (nl == l && nc == c && ncc == cc) ? 0 : 1
 endfunction
 
 " Removes all extraneous whitespace in the file
