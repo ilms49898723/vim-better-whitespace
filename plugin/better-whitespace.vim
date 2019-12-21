@@ -66,6 +66,12 @@ call s:InitVariable('strip_max_file_size', 1000)
 " Disable verbosity by default
 call s:InitVariable('better_whitespace_verbosity', 0)
 
+" Bypass the aliases set for diff by default
+if has("win32") || has("win16")
+    call s:InitVariable('diff_binary', 'diff.exe')
+else
+    call s:InitVariable('diff_binary', 'command diff')
+endif
 
 " Section: Whitespace matching setup
 
@@ -96,9 +102,20 @@ function! s:WhitespaceInit()
 endfunction
 
 " Diff command returning a space-separated list of ranges of new/modified lines (as first,last)
-let s:diff_cmd='diff -a --unchanged-group-format="" --old-group-format="" --new-group-format="%dF,%dL " --changed-group-format="%dF,%dL " '
+let s:diff_cmd=g:diff_binary.' -a --unchanged-group-format="" --old-group-format="" --new-group-format="%dF,%dL " --changed-group-format="%dF,%dL " '
 
 " Section: Actual work functions
+
+" Function to implement trim() if it does not exist
+if exists('*trim')
+    function! s:Trim(s)
+        return trim(a:s)
+    endfunction
+else
+    function! s:Trim(s)
+        return substitute(a:s, '^\_s*\(.\{-}\)\_s*$', '\1', '')
+    endfunction
+endif
 
 " query per-buffer setting for whitespace highlighting
 function! s:ShouldHighlight()
@@ -145,26 +162,25 @@ if g:current_line_whitespace_disabled_soft == 1
 else
     " Match Whitespace on all lines
     function! s:HighlightEOLWhitespace()
+        call <SID>ClearHighlighting()
         if <SID>ShouldHighlight()
-            exe 'match ExtraWhitespace "' . s:eol_whitespace_pattern . '"'
-        else
-            call <SID>ClearHighlighting()
+            let s:match_id = matchadd('ExtraWhitespace', s:eol_whitespace_pattern, 10, get(s:, 'match_id', -1))
         endif
     endfunction
 
     " Match Whitespace on all lines except the current one
     function! s:HighlightEOLWhitespaceExceptCurrentLine()
+        call <SID>ClearHighlighting()
         if <SID>ShouldHighlight()
-            exe 'match ExtraWhitespace "\%<' . line('.') .  'l' . s:eol_whitespace_pattern .
-                                   \ '\|\%>' . line('.') .  'l' . s:eol_whitespace_pattern . '"'
-        else
-            call <SID>ClearHighlighting()
+            let s:match_id = matchadd('ExtraWhitespace',
+                        \   '\%<' . line('.') .  'l' . s:eol_whitespace_pattern .
+                        \ '\|\%>' . line('.') .  'l' . s:eol_whitespace_pattern, 10, get(s:, 'match_id', -1))
         endif
     endfunction
 
     " Remove Whitespace matching
     function! s:ClearHighlighting()
-        match ExtraWhitespace ''
+        silent! call matchdelete(get(s:, 'match_id', -1))
     endfunction
 endif
 
@@ -253,7 +269,7 @@ function! s:ChangedLines()
         redir => l:better_whitespace_changes_list
             silent! echo system(s:diff_cmd.' '.shellescape(expand('%')).' -', join(getline(1, line('$')), "\n") . "\n")
         redir END
-        return map(split(trim(l:better_whitespace_changes_list), ' '), 'split(v:val, ",")')
+        return map(split(s:Trim(l:better_whitespace_changes_list), ' '), 'split(v:val, ",")')
     endif
     return []
 endfunction
