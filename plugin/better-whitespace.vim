@@ -121,7 +121,7 @@ endif
 function! s:ShouldHighlight()
     " Guess from the filetype if a) not locally decided, b) globally enabled, c) there is enough information
     if !exists('b:better_whitespace_enabled') && g:better_whitespace_enabled == 1 && !(empty(&buftype) && empty(&filetype))
-        let b:better_whitespace_enabled = &buftype != 'nofile' && index(g:better_whitespace_filetypes_blacklist, &ft) == -1
+        let b:better_whitespace_enabled = &buftype != 'nofile' && &buftype != 'popup' && index(g:better_whitespace_filetypes_blacklist, &ft) == -1
     endif
     return get(b:, 'better_whitespace_enabled', g:better_whitespace_enabled)
 endfunction
@@ -209,14 +209,7 @@ function! s:StripWhitespace(line1, line2)
 
     " Strip empty lines at EOF
     if g:strip_whitelines_at_eof == 1 && a:line2 >= line('$')
-        if &ff == 'dos'
-            let nl='\r\n'
-        elseif &ff == 'max'
-            let nl='\r'
-        else " unix
-            let nl='\n'
-        endif
-        silent execute '%s/\('.nl.'\)\+\%$//e'
+        silent execute '%s/\(\n\)\+\%$//e'
     endif
 
     let nl = line('.')
@@ -362,7 +355,7 @@ function! <SID>SetupAutoCommands()
 
             if g:current_line_whitespace_disabled_soft == 0
                 " Using syntax: clear whitespace highlighting when leaving buffer
-                autocmd BufWinLeave * call <SID>ClearHighlighting()
+                autocmd BufWinLeave * if expand("<afile>") == expand("%") | call <SID>ClearHighlighting() | endif
 
                 " Do not highlight whitespace on current line in insert mode
                 autocmd CursorMovedI * call <SID>HighlightEOLWhitespaceExceptCurrentLine()
